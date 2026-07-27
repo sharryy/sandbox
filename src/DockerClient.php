@@ -57,8 +57,20 @@ final class DockerClient
         } catch (ClientException $e) {
             throw new BadRequestException($this->describeError($e), $e->getCode(), $e);
         } catch (GuzzleException $e) {
+            if ($this->isTimeout($e)) {
+                throw new ConnectionException("Could not connect to the Docker daemon: {$e->getMessage()}", 0, $e);
+            }
+
             throw new DockerException("Docker API request failed: {$e->getMessage()}", 0, $e);
         }
+    }
+
+    private function isTimeout(GuzzleException $e): bool
+    {
+        $message = $e->getMessage();
+
+        return str_contains($message, 'timed out')
+            || str_contains($message, 'cURL error 28');
     }
 
     /**
